@@ -1,25 +1,30 @@
 package com.example.retailbusinessandservicecoveragemapper;
 
 /**
- * Java model class representing a User / Admin account stored in SQLite Database.
+ * User extends AccountEntity, demonstrating Inheritance and Polymorphism.
  */
-public class User {
+public class User extends AccountEntity {
     private long id;
     private String name;
-    private String username;
     private String password;
-    private String role;
 
     public User(long id, String name, String username, String password, String role) {
+        super(username, role); // Inheritance
         this.id = id;
         this.name = name;
-        this.username = username;
         this.password = password;
-        this.role = role;
     }
 
     public User(String name, String username, String password, String role) {
-        this(-1L, name, username, password, role);
+        super(username, role); // Inheritance
+        this.id = -1L;
+        this.name = name;
+        this.password = password;
+    }
+
+    @Override
+    public boolean hasAdminPrivileges() {
+        return "ADMIN".equalsIgnoreCase(role); // Polymorphism
     }
 
     public long getId() { return id; }
@@ -28,12 +33,6 @@ public class User {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
-
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
-
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
 }

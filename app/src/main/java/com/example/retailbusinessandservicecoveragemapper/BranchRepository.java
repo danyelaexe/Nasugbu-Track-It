@@ -6,8 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Data repository for managing Retail Branches using SQLite Database via DatabaseHelper.
- * Demonstrates Java + Kotlin interoperability with real SQLite persistence.
+ * Data repository for managing Retail Branches using local SQLite Database via DatabaseHelper.
  */
 public class BranchRepository {
 

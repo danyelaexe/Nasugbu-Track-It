@@ -23,7 +23,7 @@ import java.util.List;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     public static final String DATABASE_NAME = "NasugbuCoverageMapper.db";
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 7;
 
     // Users Table
     public static final String TABLE_USERS = "users";
@@ -153,6 +153,19 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return exists;
     }
 
+    public String getUserEmail(String username) {
+        return isUsernameTaken(username) ? username : null;
+    }
+
+    public boolean resetPassword(String username, String newPassword) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_USER_PASSWORD, newPassword);
+
+        int rows = db.update(TABLE_USERS, values, COLUMN_USER_USERNAME + " = ?", new String[]{username.trim()});
+        return rows > 0;
+    }
+
     public int getUserCount() {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.rawQuery("SELECT COUNT(*) FROM " + TABLE_USERS, null);
@@ -273,9 +286,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     private void seedInitialBranches(SQLiteDatabase db) {
-        insertSeedBranch(db, new Branch(1L, "Nasugbu Central Retail Hub", "Poblacion Ward 1, Nasugbu, Batangas", "+63 917 123 4567", "General Retail", 14.07326, 120.63265, 3.5));
+        insertSeedBranch(db, new Branch(1L, "Nasugbu Central Retail Hub", "Poblacion Ward 1, Nasugbu, Batangas", "+63 917 123 4567", "Grocery", 14.07326, 120.63265, 3.5));
         insertSeedBranch(db, new Branch(2L, "Wawa Supermarket & Supply", "Barangay Wawa, Nasugbu, Batangas", "+63 918 234 5678", "Grocery", 14.07850, 120.62620, 2.5));
-        insertSeedBranch(db, new Branch(3L, "Natipuan Retail & Service Point", "Barangay Natipuan, Nasugbu, Batangas", "+63 919 345 6789", "Service Center", 14.12000, 120.59000, 4.0));
+        insertSeedBranch(db, new Branch(3L, "Natipuan Retail & Service Point", "Barangay Natipuan, Nasugbu, Batangas", "+63 919 345 6789", "Grocery", 14.12000, 120.59000, 4.0));
         insertSeedBranch(db, new Branch(5L, "Kaylaway Express Pharmacy & Mart", "Barangay Kaylaway, Nasugbu, Batangas", "+63 921 567 8901", "Pharmacy", 14.06200, 120.78000, 3.0));
 
         // Hardware & Construction Supply Branches
@@ -344,6 +357,18 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         insertSeedBranch(db, new Branch(605L, "Mister Ink Computer Sales and Services", "C. Alvarez Street, Brgy. 4, Nasugbu, Batangas", "+63 921 605 0005", "Printing Shop", 14.07350, 120.63430, 2.5));
         insertSeedBranch(db, new Branch(606L, "3A Enterprises", "C. Alvarez Street, Nasugbu, Batangas", "+63 921 606 0006", "Printing Shop", 14.07270, 120.63330, 2.5));
         insertSeedBranch(db, new Branch(607L, "Ezranet Computer Shop", "C. Alvarez Street in Barangay 3, Nasugbu, Batangas", "+63 921 607 0007", "Printing Shop", 14.07244, 120.63181, 2.5));
+
+        // Gasoline Stations
+        insertSeedBranch(db, new Branch(701L, "GREAT OIL Gas Station", "Brgy, Tagaytay - Nasugbu Hwy, Nasugbu, Batangas", "+63 922 701 0001", "Gasoline Stations", 14.11450, 120.74100, 3.5));
+        insertSeedBranch(db, new Branch(702L, "MARZ FUEL - Nasugbu Branch", "Nasugbu, Batangas", "+63 922 702 0002", "Gasoline Stations", 14.07320, 120.63580, 2.5));
+        insertSeedBranch(db, new Branch(703L, "Mount pico gas station", "Nasugbu, Batangas", "+63 922 703 0003", "Gasoline Stations", 14.08650, 120.68400, 3.0));
+        insertSeedBranch(db, new Branch(704L, "Caltex Nasugbu", "J. P. Laurel St, Nasugbu, 4231 Batangas", "+63 922 704 0004", "Gasoline Stations", 14.07150, 120.63300, 2.5));
+        insertSeedBranch(db, new Branch(705L, "Clean Fuel Station - Nasugbu Batangas", "Tagaytay - Nasugbu Hwy, Nasugbu, Batangas", "+63 922 705 0005", "Gasoline Stations", 14.08150, 120.66900, 3.0));
+        insertSeedBranch(db, new Branch(706L, "Total (Nasugbu - Wawa)", "Nasugbu-Ternate Hwy, Wawa, Nasugbu, 4231 Batangas", "+63 922 706 0006", "Gasoline Stations", 14.07800, 120.62700, 2.5));
+        insertSeedBranch(db, new Branch(707L, "Rephil Nasugbu", "Barangay, 4231 J. P. Laurel St, 11 (Pob.), Nasugbu, Batangas", "+63 922 707 0007", "Gasoline Stations", 14.06180, 120.63420, 2.5));
+        insertSeedBranch(db, new Branch(708L, "Phoenix Petrol Station. J. P Laurel", "4231 J. P. Laurel St, Nasugbu, Batangas", "+63 922 708 0008", "Gasoline Stations", 14.06500, 120.63400, 2.5));
+        insertSeedBranch(db, new Branch(709L, "Megga Gas Station", "Nasugbu, Batangas", "+63 922 709 0009", "Gasoline Stations", 14.16100, 120.63200, 3.0));
+        insertSeedBranch(db, new Branch(710L, "Shell", "Tagaytay - Nasugbu Hwy, Tuy, 4214 Batangas", "+63 922 710 0010", "Gasoline Stations", 14.08800, 120.71500, 3.5));
     }
 
     private void insertSeedBranch(SQLiteDatabase db, Branch branch) {

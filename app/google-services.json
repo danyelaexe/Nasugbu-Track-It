@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "272578639410",
+    "project_id": "retail-branch-coverage-mapper",
+    "storage_bucket": "retail-branch-coverage-mapper.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:272578639410:android:4174a6a7f1aa1c3a70ee2b",
+        "android_client_info": {
+          "package_name": "com.example.retailbusinessandservicecoveragemapper"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWgglAqhRrYkvJIU5JyhMQ1TR6EMyprKY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
