@@ -138,6 +138,8 @@ fun BranchesScreen(
                 items(filteredBranches, key = { it.id }) { branch ->
                     val catColor = getCategoryColor(branch.category)
                     val icon = getCategoryIcon(branch.category)
+                    val canModify = isAdmin
+
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(20.dp),
@@ -210,7 +212,7 @@ fun BranchesScreen(
                                 ) {
                                     Text("📤 Share")
                                 }
-                                if (isAdmin) {
+                                if (canModify) {
                                     TextButton(onClick = { onEditBranch(branch) }) {
                                         Text("✏️ Edit")
                                     }

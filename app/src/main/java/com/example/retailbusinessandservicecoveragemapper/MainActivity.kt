@@ -37,10 +37,12 @@ fun RetailBusinessAndServiceCoverageMapperApp() {
     var isLoggedIn by rememberSaveable { mutableStateOf(value = false) }
     var loggedInUser by remember { mutableStateOf<User?>(null) }
 
+    val isAdminUser = loggedInUser != null && "ADMIN".equals(loggedInUser?.role, ignoreCase = true)
+
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         if (isLoggedIn) {
             MainContainerScreen(
-                isAdmin = true,
+                isAdmin = isAdminUser,
                 currentUser = loggedInUser,
                 onSwitchMode = {
                     isLoggedIn = false
@@ -60,7 +62,7 @@ fun RetailBusinessAndServiceCoverageMapperApp() {
                     }
                 },
                 onRegisterUser = { name: String, username: String, password: String ->
-                    val newUser = User(name, username, password, "ADMIN")
+                    val newUser = User(name, username, password, "USER")
                     val success = dbHelper.registerUser(newUser)
                     if (success) {
                         null
