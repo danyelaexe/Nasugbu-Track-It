@@ -51,9 +51,9 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun LoginScreen(
     onAdminLogin: (String, String) -> String?,
-    onRegisterUser: (String, String, String) -> String?,
-    onResetPassword: (String, String) -> String?,
-    onGetUserEmail: (String) -> String?
+    onRegisterUser: (String, String, String, String, String, String, String) -> String?,
+    onResetPasswordWithAnswers: (String, String, String, String) -> String?,
+    onGetSecurityQuestions: (String) -> Array<String>?
 ) {
     var username by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -68,6 +68,10 @@ fun LoginScreen(
     var regUsername by rememberSaveable { mutableStateOf("") }
     var regPassword by rememberSaveable { mutableStateOf("") }
     var regConfirmPassword by rememberSaveable { mutableStateOf("") }
+    var regQ1 by rememberSaveable { mutableStateOf("What is your favorite food?") }
+    var regAns1 by rememberSaveable { mutableStateOf("") }
+    var regQ2 by rememberSaveable { mutableStateOf("What city were you born in?") }
+    var regAns2 by rememberSaveable { mutableStateOf("") }
     var regErrorMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var regSuccessMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var isLoading by rememberSaveable { mutableStateOf(false) }
@@ -307,7 +311,7 @@ fun LoginScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                "Register your account to access branch management.",
+                                "Register your account and set security questions for password recovery.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -376,6 +380,52 @@ fun LoginScreen(
                                 shape = RoundedCornerShape(12.dp)
                             )
 
+                            Spacer(Modifier.height(12.dp))
+                            Text("🔒 Security Questions (For Password Recovery)", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.height(4.dp))
+
+                            OutlinedTextField(
+                                value = regQ1,
+                                onValueChange = { regQ1 = it },
+                                label = { Text("Security Question 1") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
+                            Spacer(Modifier.height(6.dp))
+
+                            OutlinedTextField(
+                                value = regAns1,
+                                onValueChange = { regAns1 = it },
+                                label = { Text("Your Answer 1") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
+                            Spacer(Modifier.height(8.dp))
+
+                            OutlinedTextField(
+                                value = regQ2,
+                                onValueChange = { regQ2 = it },
+                                label = { Text("Security Question 2") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
+                            Spacer(Modifier.height(6.dp))
+
+                            OutlinedTextField(
+                                value = regAns2,
+                                onValueChange = { regAns2 = it },
+                                label = { Text("Your Answer 2") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
                             regErrorMessage?.let {
                                 Spacer(Modifier.height(8.dp))
                                 Surface(
@@ -402,9 +452,11 @@ fun LoginScreen(
                                         regUsername.isBlank() -> regErrorMessage = "Please choose a Username."
                                         regPassword.isBlank() -> regErrorMessage = "Please enter a Password."
                                         regPassword != regConfirmPassword -> regErrorMessage = "Passwords do not match."
+                                        regAns1.isBlank() -> regErrorMessage = "Please provide an answer for Security Question 1."
+                                        regAns2.isBlank() -> regErrorMessage = "Please provide an answer for Security Question 2."
                                         else -> {
                                             isLoading = true
-                                            val err = onRegisterUser(regName.trim(), regUsername.trim(), regPassword)
+                                            val err = onRegisterUser(regName.trim(), regUsername.trim(), regPassword, regQ1.trim(), regAns1.trim(), regQ2.trim(), regAns2.trim())
                                             isLoading = false
                                             if (err == null) {
                                                 regSuccessMessage = "Account created for '$regName'! You can now log in."
@@ -451,8 +503,8 @@ fun LoginScreen(
     if (isForgotPasswordDialogOpen) {
         ForgotPasswordDialog(
             onDismiss = { isForgotPasswordDialogOpen = false },
-            onGetUserEmail = onGetUserEmail,
-            onResetPassword = onResetPassword
+            onGetSecurityQuestions = onGetSecurityQuestions,
+            onResetPasswordWithAnswers = onResetPasswordWithAnswers
         )
     }
 }
@@ -460,15 +512,13 @@ fun LoginScreen(
 @Composable
 private fun ForgotPasswordDialog(
     onDismiss: () -> Unit,
-    onGetUserEmail: (String) -> String?,
-    onResetPassword: (String, String) -> String?
+    onGetSecurityQuestions: (String) -> Array<String>?,
+    onResetPasswordWithAnswers: (String, String, String, String) -> String?
 ) {
-    val captchaChars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789#$@%&*"
     var username by rememberSaveable { mutableStateOf("") }
-    var captchaInput by rememberSaveable { mutableStateOf("") }
-    var currentCaptcha by rememberSaveable {
-        mutableStateOf((1..6).map { captchaChars.random() }.joinToString(""))
-    }
+    var questionsLoaded by rememberSaveable { mutableStateOf<Array<String>?>(null) }
+    var ans1 by rememberSaveable { mutableStateOf("") }
+    var ans2 by rememberSaveable { mutableStateOf("") }
     var newPassword by rememberSaveable { mutableStateOf("") }
     var confirmNewPassword by rememberSaveable { mutableStateOf("") }
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
@@ -476,7 +526,7 @@ private fun ForgotPasswordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("🔑 Reset Password with CAPTCHA") },
+        title = { Text("🔑 Reset Password with Security Questions") },
         text = {
             Column(
                 modifier = Modifier
@@ -485,7 +535,7 @@ private fun ForgotPasswordDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    "Enter your username, type the security CAPTCHA code exactly as shown below, and set your new password.",
+                    "Enter your username to load your security questions, then provide your answers to reset your password.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -500,82 +550,94 @@ private fun ForgotPasswordDialog(
                     leadingIcon = { Text("👤") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = questionsLoaded == null
                 )
 
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text("Security CAPTCHA (Case-Sensitive):", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                currentCaptcha,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        TextButton(
-                            onClick = {
-                                currentCaptcha = (1..6).map { captchaChars.random() }.joinToString("")
-                                captchaInput = ""
+                if (questionsLoaded == null) {
+                    Button(
+                        onClick = {
+                            if (username.isBlank()) {
+                                errorMessage = "Please enter your username."
+                            } else {
+                                val qs = onGetSecurityQuestions(username.trim())
+                                if (qs == null) {
+                                    errorMessage = "Username not found in the database."
+                                } else {
+                                    questionsLoaded = qs
+                                    errorMessage = null
+                                }
                             }
-                        ) {
-                            Text("🔄 Refresh", style = MaterialTheme.typography.labelSmall)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Load Security Questions")
+                    }
+                } else {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("🛡️ Answer your security questions:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text("1. ${questionsLoaded!![0]}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                         }
                     }
+
+                    OutlinedTextField(
+                        value = ans1,
+                        onValueChange = { ans1 = it; errorMessage = null },
+                        label = { Text("Answer 1") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(Modifier.height(4.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("2. ${questionsLoaded!![1]}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = ans2,
+                        onValueChange = { ans2 = it; errorMessage = null },
+                        label = { Text("Answer 2") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(Modifier.height(6.dp))
+
+                    OutlinedTextField(
+                        value = newPassword,
+                        onValueChange = { newPassword = it; errorMessage = null },
+                        label = { Text("New Password") },
+                        leadingIcon = { Text("🔒") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = confirmNewPassword,
+                        onValueChange = { confirmNewPassword = it; errorMessage = null },
+                        label = { Text("Confirm New Password") },
+                        leadingIcon = { Text("🔑") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        shape = RoundedCornerShape(12.dp)
+                    )
                 }
-
-                OutlinedTextField(
-                    value = captchaInput,
-                    onValueChange = {
-                        captchaInput = it
-                        errorMessage = null
-                    },
-                    label = { Text("Enter CAPTCHA Code") },
-                    leadingIcon = { Text("🛡️") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                OutlinedTextField(
-                    value = newPassword,
-                    onValueChange = {
-                        newPassword = it
-                        errorMessage = null
-                    },
-                    label = { Text("New Password") },
-                    leadingIcon = { Text("🔒") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                OutlinedTextField(
-                    value = confirmNewPassword,
-                    onValueChange = {
-                        confirmNewPassword = it
-                        errorMessage = null
-                    },
-                    label = { Text("Confirm New Password") },
-                    leadingIcon = { Text("🔑") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    shape = RoundedCornerShape(12.dp)
-                )
 
                 errorMessage?.let {
                     Surface(
@@ -612,36 +674,27 @@ private fun ForgotPasswordDialog(
             }
         },
         confirmButton = {
-            if (successMessage == null) {
+            if (questionsLoaded != null && successMessage == null) {
                 Button(
                     onClick = {
                         when {
-                            username.isBlank() -> errorMessage = "Please enter your username."
-                            captchaInput.trim() != currentCaptcha -> {
-                                errorMessage = "Incorrect CAPTCHA code. Please try again."
-                                currentCaptcha = (1..6).map { captchaChars.random() }.joinToString("")
-                                captchaInput = ""
-                            }
+                            ans1.isBlank() -> errorMessage = "Please enter Answer 1."
+                            ans2.isBlank() -> errorMessage = "Please enter Answer 2."
                             newPassword.isBlank() -> errorMessage = "Please enter a new password."
                             newPassword != confirmNewPassword -> errorMessage = "Passwords do not match."
                             else -> {
-                                val email = onGetUserEmail(username.trim())
-                                if (email == null) {
-                                    errorMessage = "Username not found in the database."
+                                val err = onResetPasswordWithAnswers(username.trim(), ans1.trim(), ans2.trim(), newPassword)
+                                if (err == null) {
+                                    successMessage = "Password reset successfully! You can now log in."
+                                    errorMessage = null
                                 } else {
-                                    val err = onResetPassword(username.trim(), newPassword)
-                                    if (err == null) {
-                                        successMessage = "Password reset successfully! You can now log in."
-                                        errorMessage = null
-                                    } else {
-                                        errorMessage = err
-                                    }
+                                    errorMessage = err
                                 }
                             }
                         }
                     }
                 ) {
-                    Text("Reset Password")
+                    Text("Save New Password")
                 }
             }
         },

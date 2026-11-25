@@ -61,8 +61,8 @@ fun RetailBusinessAndServiceCoverageMapperApp() {
                         "Invalid username or password."
                     }
                 },
-                onRegisterUser = { name: String, username: String, password: String ->
-                    val newUser = User(name, username, password, "USER")
+                onRegisterUser = { name: String, username: String, password: String, q1: String, a1: String, q2: String, a2: String ->
+                    val newUser = User(name, username, password, "USER", q1, a1, q2, a2)
                     val success = dbHelper.registerUser(newUser)
                     if (success) {
                         null
@@ -70,12 +70,11 @@ fun RetailBusinessAndServiceCoverageMapperApp() {
                         "Username '$username' is already registered."
                     }
                 },
-                onResetPassword = { username: String, newPassword: String ->
-                    val success = dbHelper.resetPassword(username, newPassword)
-                    if (success) null else "Failed to update password."
+                onResetPasswordWithAnswers = { username: String, ans1: String, ans2: String, newPassword: String ->
+                    dbHelper.verifySecurityAnswersAndResetPassword(username, ans1, ans2, newPassword)
                 },
-                onGetUserEmail = { identifier: String ->
-                    dbHelper.getUserEmail(identifier)
+                onGetSecurityQuestions = { username: String ->
+                    dbHelper.getUserSecurityQuestions(username)
                 }
             )
         }
