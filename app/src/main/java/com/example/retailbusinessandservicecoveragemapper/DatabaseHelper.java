@@ -18,12 +18,12 @@ import java.util.List;
 /**
  * SQLite Database Helper class written in Java to manage Users and Branches.
  * Performs real-time SQLite database operations for account registration,
- * user authentication, and branch management.
+ * user authentication, security questions, and branch management.
  */
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     public static final String DATABASE_NAME = "NasugbuCoverageMapper.db";
-    private static final int DATABASE_VERSION = 7;
+    private static final int DATABASE_VERSION = 8;
 
     // Users Table
     public static final String TABLE_USERS = "users";
@@ -32,6 +32,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_USER_USERNAME = "username";
     public static final String COLUMN_USER_PASSWORD = "password";
     public static final String COLUMN_USER_ROLE = "role";
+    public static final String COLUMN_USER_QUESTION1 = "question1";
+    public static final String COLUMN_USER_ANSWER1 = "answer1";
+    public static final String COLUMN_USER_QUESTION2 = "question2";
+    public static final String COLUMN_USER_ANSWER2 = "answer2";
 
     // Branches Table
     public static final String TABLE_BRANCHES = "branches";
@@ -64,7 +68,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_USER_NAME + " TEXT NOT NULL, " +
                 COLUMN_USER_USERNAME + " TEXT UNIQUE NOT NULL, " +
                 COLUMN_USER_PASSWORD + " TEXT NOT NULL, " +
-                COLUMN_USER_ROLE + " TEXT NOT NULL DEFAULT 'ADMIN'" +
+                COLUMN_USER_ROLE + " TEXT NOT NULL DEFAULT 'ADMIN', " +
+                COLUMN_USER_QUESTION1 + " TEXT, " +
+                COLUMN_USER_ANSWER1 + " TEXT, " +
+                COLUMN_USER_QUESTION2 + " TEXT, " +
+                COLUMN_USER_ANSWER2 + " TEXT" +
                 ");";
         db.execSQL(createUsersTable);
 
@@ -85,6 +93,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         adminValues.put(COLUMN_USER_USERNAME, "admin");
         adminValues.put(COLUMN_USER_PASSWORD, "admin123");
         adminValues.put(COLUMN_USER_ROLE, "ADMIN");
+        adminValues.put(COLUMN_USER_QUESTION1, "What is the system name?");
+        adminValues.put(COLUMN_USER_ANSWER1, "Track-It");
+        adminValues.put(COLUMN_USER_QUESTION2, "What municipality is this?");
+        adminValues.put(COLUMN_USER_ANSWER2, "Nasugbu");
         db.insert(TABLE_USERS, null, adminValues);
 
         seedInitialBranches(db);
@@ -110,6 +122,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_USER_USERNAME, user.getUsername());
         values.put(COLUMN_USER_PASSWORD, user.getPassword());
         values.put(COLUMN_USER_ROLE, user.getRole() != null ? user.getRole() : "ADMIN");
+        values.put(COLUMN_USER_QUESTION1, user.getQuestion1());
+        values.put(COLUMN_USER_ANSWER1, user.getAnswer1());
+        values.put(COLUMN_USER_QUESTION2, user.getQuestion2());
+        values.put(COLUMN_USER_ANSWER2, user.getAnswer2());
 
         long result = db.insert(TABLE_USERS, null, values);
         return result != -1;
@@ -132,7 +148,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             String user = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_USERNAME));
             String pass = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_PASSWORD));
             String role = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_ROLE));
-            authenticatedUser = new User(id, name, user, pass, role);
+            String q1 = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_QUESTION1));
+            String a1 = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_ANSWER1));
+            String q2 = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_QUESTION2));
+            String a2 = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_ANSWER2));
+            authenticatedUser = new User(id, name, user, pass, role, q1, a1, q2, a2);
             cursor.close();
         }
         return authenticatedUser;
@@ -155,6 +175,63 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public String getUserEmail(String username) {
         return isUsernameTaken(username) ? username : null;
+    }
+
+    public String[] getUserSecurityQuestions(String username) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(
+                TABLE_USERS,
+                new String[]{COLUMN_USER_QUESTION1, COLUMN_USER_QUESTION2},
+                COLUMN_USER_USERNAME + " = ?",
+                new String[]{username.trim()},
+                null, null, null
+        );
+
+        String[] questions = null;
+        if (cursor != null && cursor.moveToFirst()) {
+            String q1 = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_QUESTION1));
+            String q2 = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_QUESTION2));
+            questions = new String[]{
+                    q1 != null && !q1.trim().isEmpty() ? q1 : "What is the system name?",
+                    q2 != null && !q2.trim().isEmpty() ? q2 : "What municipality is this?"
+            };
+            cursor.close();
+        }
+        return questions;
+    }
+
+    public String verifySecurityAnswersAndResetPassword(String username, String ans1, String ans2, String newPassword) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(
+                TABLE_USERS,
+                new String[]{COLUMN_USER_ANSWER1, COLUMN_USER_ANSWER2},
+                COLUMN_USER_USERNAME + " = ?",
+                new String[]{username.trim()},
+                null, null, null
+        );
+
+        if (!cursor.moveToFirst()) {
+            cursor.close();
+            return "Username not found in database.";
+        }
+
+        String storedAns1 = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_ANSWER1));
+        String storedAns2 = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_ANSWER2));
+        cursor.close();
+
+        if (storedAns1 == null || storedAns1.trim().isEmpty()) storedAns1 = "Track-It";
+        if (storedAns2 == null || storedAns2.trim().isEmpty()) storedAns2 = "Nasugbu";
+
+        if (!storedAns1.trim().equalsIgnoreCase(ans1.trim())) {
+            return "Incorrect Answer for Security Question 1.";
+        }
+
+        if (!storedAns2.trim().equalsIgnoreCase(ans2.trim())) {
+            return "Incorrect Answer for Security Question 2.";
+        }
+
+        boolean success = resetPassword(username, newPassword);
+        return success ? null : "Failed to update password in database.";
     }
 
     public boolean resetPassword(String username, String newPassword) {
